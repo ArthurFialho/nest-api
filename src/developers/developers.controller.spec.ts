@@ -236,5 +236,37 @@ describe('DevelopersController', () => {
       await expect(controller.create(invalidDto as any)).rejects.toThrow(BadRequestException);
     });
   });
+
+  describe('integration scenarios', () => {
+    it('should handle multiple operations in sequence', async () => {
+      // Create
+      mockDevelopersService.create.mockResolvedValue(mockDeveloper);
+      const created = await controller.create({
+        name: 'Test Developer',
+        email: 'test@example.com',
+        skills: ['JavaScript'],
+        experience: 2,
+      });
+
+      // Update
+      const updateDto = { experience: 3 };
+      const updated = { ...created, ...updateDto };
+      mockDevelopersService.update.mockResolvedValue(updated);
+      
+      const result = await controller.update('1', updateDto);
+
+      expect(result.experience).toBe(3);
+    });
+
+    it('should handle concurrent requests', async () => {
+      const developers = [mockDeveloper];
+      mockDevelopersService.findAll.mockResolvedValue(developers);
+
+      const promises = Array(5).fill(null).map(() => controller.findAll());
+      const results = await Promise.all(promises);
+
+      expect(results).toHaveLength(5);
+      results.forEach(result => expect(result).toEqual(developers));
+    });
   });
 });
